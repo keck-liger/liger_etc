@@ -182,8 +182,8 @@ def gen_spec(spec1, filt='K', wave=None, scale=None, fint=None, flambda=None, ma
     lmax = lmax.values
     if not isinstance(lmin, str): lmin = lmin[0]
     if not isinstance(lmax, str): lmax = lmax[0]
-    if '*' in lmin: lmin = lmin.replace('*', '')
-    if '*' in lmax: lmax = lmax.replace('*', '')
+    if '*' in str(lmin): lmin = lmin.replace('*', '')
+    if '*' in str(lmax): lmax = lmax.replace('*', '')
     lmin = float(lmin)
     lmax = float(lmax)
     lmean = np.mean([lmin, lmax])

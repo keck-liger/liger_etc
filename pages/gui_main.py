@@ -15,6 +15,7 @@ from astropy.io import fits
 from math import log10, ceil, sqrt, log
 from scipy import interpolate
 from misc_funcs import get_filterdat, extrap1d, ab2vega, gen_spec
+from photutils import CircularAperture
 
 # constants
 c_km = 2.9979E5      # km/s
@@ -109,9 +110,26 @@ def exec_gui(page_container=None, side_container=None):
 
     #   Page title, set 2 columns for page format. Setup the configuration sidebar.
     container = page_container.beta_container()
+    container.subheader('Instrument Configuration')
     col1, col2 = container.beta_columns(2)
-    col1.subheader('Liger Configuration')
 
+    scale = col1.number_input('Plate Scale ( Milircseconds per Spatial Pixel )', value=14.)
+    if 'fov' not in st.session_state:
+        default_fov = '6.4 x 6.4'
+    else:
+        default_fov = st.session_state.fov
+    fov = col1.text_input('Field of View in [x]" x [y]"', value=default_fov)
+    collarea = col2.number_input('Telescope Collecting Area in m^2:', value=78.5)
+    tput = col2.radio('Throughput Configuration:', ['Default', 'Enter Total Throughput', 'Enter Throughput Factor'])
+    if tput == 'Default':
+        efftot = None
+        eff_factor = None
+    elif tput == 'Enter Total Throughput':
+        efftot = col2.number_input('Bandpass Throughput', value=0.4)
+        eff_factor = None
+    elif tput == 'Enter Throughput Factor':
+        efftot=None
+        eff_factor = col2.number_input('Throughput Factor', value = 0.9)
     #   select the mode for the ETC -- Imager or IFS
     side_container.title('Exposure / Signal-To-Noise Setup')
     mode = side_container.radio("Please Select Liger Mode", ['IFS', 'Imager'])
@@ -119,115 +137,14 @@ def exec_gui(page_container=None, side_container=None):
     if mode == 'Imager':
         #   clarification of calculation
         calc_title = ''
-        scale = '14mas'
-        col1.markdown('Plate Scale ( Miliarcseconds per Spatial Pixel ): \n 14mas')
-        col1.markdown('Field of View (Arcseconds x Arcseconds): \n 20.4 x 20.4')
-        fov = '20.4 x 20.4'
-        filt = col1.selectbox("Filter: ",
-                            ['Zbb', 'Ybb', 'Jbb', 'Hbb', 'Kbb', 'Z', 'Y', 'J', 'H', 'K', 'Kcb','Zn3', 'Zn4', 'Jn1',
-                            'Jn2', 'Jn3', 'Jn4', 'Hn1', 'Hn2', 'Hn3', 'Hn4', 'Hn5', 'Kn1', 'Kn2', 'Kn3', 'Kc3', 'Kn4',
-                             'Kc4', 'Kn5', 'Kc5', 'FeII','Hcont','Y','J','Kp','BrGamma','Kcont','HeI_B','Kcb'])
     elif mode == 'IFS':
         #   clarification of calculation
         calc_title = ' ( per Spectral Element )'
         #   User can select whether to configure with the Filter and Plate scale or the Field of View
-        subconf = side_container.radio("Configure With: ", ['Filter / Plate Scale', 'Field of View'])
-        if subconf=='Filter / Plate Scale':
-            filts = modes['Filter'].values
-            scales = modes.columns[-4:].values
-            filt = col1.selectbox("Filter: ", [f for f in filts.flatten()])
-            #col1.write([s for s in scales.flatten()])
-            if filt in ['Kcb','Kc3','Kc4','Kc5']:
-                scale = '100mas'
-                col1.markdown('Plate Scale ( Arcseconds per Spatial Pixel ): 100mas')
-            else:
-                scale = col1.select_slider('Plate Scale ( Arcseconds per Spatial Pixel )', [s for s in scales])
-            fovs = modes[scale].iloc[(np.where(modes['Filter'] == filt)[0])].values
-            if len(fovs)>1:
-                fov = col1.select_slider('Field of View:',[f for f in fovs.flatten()])
-            else:
-                fov = fovs[0]
-        else:
-            fov = col1.select_slider('Field of View:',
-                                           ['0.32 x 1.28', '0.64 x 1.28', '0.72 x 1.28', '0.84 x 1.28', '0.90 x 1.28',
-                                            '0.96 x 1.28',
-                                            '0.56 x 2.24', '1.12 x 2.24', '1.26 x 2.24', '1.47 x 2.24', '1.58 x 2.24',
-                                            '1.68 x 2.24',
-                                            '0.8 x 3.2', '1.6 x 3.2', '1.8 x 3.2', '2.1 x 3.2', '2.25 x 3.2', '2.4 x 3.2',
-                                            '1.6 x 6.4', '3.2 x 6.4', '3.6 x 6.4', '4.2 x 6.4', '4.5 x 6.4', '4.8 x 6.4'])
-            if fov == '0.32 x 1.28':
-                filt = col1.selectbox('Filter: ', ['Zbb', 'Jbb', 'Hbb', 'Kbb'])
-                scale = '20mas'
-            if fov == '0.64 x 1.28':
-                filt = col1.selectbox('Filter: ', ['Zn4', 'Jn1', 'Hn5', 'Kn5'])
-                scale = '20mas'
-            if fov == '0.72 x 1.28':
-                filt = col1.selectbox('Filter: ', ['Hn1', 'Kn1'])
-                scale = '20mas'
-            if fov == '0.84 x 1.28':
-                filt = col1.selectbox('Filter: ', ['Jn2', 'Jn4', 'Hn4', 'Kn4'])
-                scale = '20mas'
-            if fov == '0.90 x 1.28':
-                filt = col1.selectbox('Filter: ', ['Hn2', 'Kn2'])
-                scale = '20mas'
-            if fov == '0.96 x 1.28':
-                filt = col1.selectbox('Filter: ', ['Jn3', 'Hn3', 'Kn3'])
-                scale = '20mas'
-            if fov == '0.56 x 2.24':
-                filt = col1.selectbox('Filter: ', ['Zbb', 'Jbb', 'Hbb', 'Kbb'])
-                scale = '35mas'
-            if fov == '1.12 x 2.24':
-                filt = col1.selectbox('Filter: ', ['Zn4', 'Jn1', 'Hn5', 'Kn5'])
-                scale = '35mas'
-            if fov == '1.26 x 2.24':
-                filt = col1.selectbox('Filter: ', ['Hn1', 'Kn1'])
-                scale = '35mas'
-            if fov == '1.47 x 2.24':
-                filt = col1.selectbox('Filter: ', ['Jn2', 'Jn4', 'Hn4', 'Kn4'])
-                scale = '35mas'
-            if fov == '1.58 x 2.24':
-                filt = col1.selectbox('Filter: ', ['Hn2', 'Kn2'])
-                scale = '35mas'
-            if fov == '1.68 x 2.24':
-                filt = col1.selectbox('Filter: ', ['Jn3', 'Hn3', 'Kn3'])
-                scale = '35mas'
-            if fov == '0.8 x 3.2':
-                filt = col1.selectbox('Filter: ', ['Zbb', 'Jbb', 'Hbb', 'Kbb'])
-                scale = '50mas'
-            if fov == '1.6 x 3.2':
-                filt = col1.selectbox('Filter: ', ['Zn4', 'Jn1', 'Hn5', 'Kn5'])
-                scale = '50mas'
-            if fov == '1.8 x 3.2':
-                filt = col1.selectbox('Filter: ', ['Hn1', 'Kn1'])
-                scale = '50mas'
-            if fov == '2.1 x 3.2':
-                filt = col1.selectbox('Filter: ', ['Jn2', 'Jn4', 'Hn4', 'Kn4'])
-                scale = '50mas'
-            if fov == '2.25 x 3.2':
-                filt = col1.selectbox('Filter: ', ['Hn2', 'Kn2'])
-                scale = '50mas'
-            if fov == '2.4 x 3.2':
-                filt = col1.selectbox('Filter: ', ['Jn3', 'Hn3', 'Kn3'])
-                scale = '50mas'
-            if fov == '1.6 x 6.4':
-                filt = col1.selectbox('Filter: ', ['Zbb', 'Jbb', 'Hbb', 'Kbb', 'Kcb'])
-                scale = '100mas'
-            if fov == '3.2 x 6.4':
-                filt = col1.selectbox('Filter: ', ['Zn4', 'Jn1', 'Hn5', 'Kn5', 'Kc5'])
-                scale = '100mas'
-            if fov == '3.6 x 6.4':
-                filt = col1.selectbox('Filter: ', ['Hn1', 'Kn1'])
-                scale = '100mas'
-            if fov == '4.2 x 6.4':
-                filt = col1.selectbox('Filter: ', ['Jn2', 'Jn4', 'Hn4', 'Kn4', 'Kc4'])
-                scale = '100mas'
-            if fov == '4.5 x 6.4':
-                filt = col1.selectbox('Filter: ', ['Hn2', 'Kn2'])
-                scale = '100mas'
-            if fov == '4.8 x 6.4':
-                filt = col1.selectbox('Filter: ', ['Jn3', 'Hn3', 'Kn3', 'Kc3'])
-                scale = '100mas'
-
+    filt = col1.selectbox("Filter: ",
+                          ['Zbb', 'Ybb', 'Jbb', 'Hbb', 'Kbb', 'Z', 'Y', 'J', 'H', 'K', 'Kcb', 'Zn3', 'Zn4', 'Jn1',
+                           'Jn2', 'Jn3', 'Jn4', 'Hn1', 'Hn2', 'Hn3', 'Hn4', 'Hn5', 'Kn1', 'Kn2', 'Kn3', 'Kc3', 'Kn4',
+                           'Kc4', 'Kn5', 'Kc5', 'FeII', 'Hcont', 'Y', 'J', 'Kp', 'BrGamma', 'Kcont', 'HeI_B', 'Kcb'])
     #   Find the relevant wavelengths for the calculation
     filts = np.array([fil.lower() for fil in modes['Filter']])
     wavs = np.where(filts == filt.lower())[0]
@@ -237,20 +154,22 @@ def exec_gui(page_container=None, side_container=None):
     lmax = lmax.values
     if not isinstance(lmin, str): lmin = lmin[0]
     if not isinstance(lmax, str): lmax = lmax[0]
-    if '*' in lmin: lmin = lmin.replace('*', '')
-    if '*' in lmax: lmax = lmax.replace('*', '')
+    if '*' in str(lmin): lmin = lmin.replace('*', '')
+    if '*' in str(lmax): lmax = lmax.replace('*', '')
     lmin = float(lmin)
     lmax = float(lmax)
     lmean = np.mean([lmin, lmax])
 
     #   Convert selected values to inputs for ETC code
-    etc_scale = float(scale.split('mas')[0])*1e-3
+    etc_scale = float(scale)*1e-3
     etc_fov = [float(fov.split('x')[0]), float(fov.split('x')[1])]
 
     #   Setup for more configuration of ETC code
-    calc = side_container.radio('Calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time'])
-    col1.subheader('Selected Configuration:')
-    col1.write('Selected Mode: ' + mode)
+    calc = side_container.radio('Calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time', 'Limiting Flux'])
+    if 'snr' not in st.session_state:
+        snr_default = 5.
+    else:
+        snr_default = st.session_state.snr
     if calc == 'Signal-to-Noise Ratio (SNR)':
         if mode == 'Imager':
             input_title = 'Frame Integration Time (Seconds) per Bandpass: '
@@ -263,50 +182,86 @@ def exec_gui(page_container=None, side_container=None):
         etc_calc = 'snr'
         plot_subhead = 'SNR per Spectral Flux Element:'
         snr = 10.
+        flux_units = None
+        mag_calc = None
     elif calc == 'Exposure Time':
         if mode == 'Imager':
             input_title = 'SNR per Bandpass: '
         elif mode == 'IFS':
             input_title = 'SNR per Wavelength Element: '
-        snr = side_container.number_input(input_title, min_value=0., value=5.)
+        snr = side_container.number_input(input_title, min_value=0., value=snr_default)
         etc_calc = 'exptime'
         plot_subhead = 'Exposure Time Required for Input SNR per Spectral Flux Element:'
         itime = 10.
         nframes = 1.
         col1.write('Calculating Integration Time for Input SNR' + calc_title)
+        flux_units = None
+        mag_calc = None
+    elif calc == 'Limiting Flux':
+        fl = None
+        if mode == 'Imager':
+            input_title1 = 'SNR per Bandpass: '
+            input_title2 = 'Frame Integration Time (Seconds) per Bandpass: '
+            flux_units = side_container.radio('Calculate: ', ['Photons/s/m2', 'ergs/s/cm2'])
+            snr = side_container.number_input(input_title1, min_value=0., value=snr_default)
+            snr_type = side_container.radio('SNR Calculation:', ['Total', 'Peak'])
+            mag_calc = snr_type.lower()
+        elif mode == 'IFS':
+            snr_type = side_container.radio('SNR Calculation:',
+                                      ['Integrated Total Across Spectrum', 'Peak'])
+            if snr_type == 'Per Wavelength Element':
+                mag_calc = 'per_wav'
+            elif snr_type == 'Integrated Total Across Spectrum':
+                mag_calc = 'total'
+            elif snr_type == 'Peak':
+                mag_calc = 'peak'
+            input_title1 = 'SNR ' + snr_type
+            snr = side_container.number_input(input_title1, min_value=0., value=snr_default)
+            input_title2 = 'Frame Integration Time (Seconds) per Wavelength Element: '
+            flux_units = side_container.radio('Calculate: ', ['Photons/s/m2/um', 'ergs/s/cm2/um'])
+        itime = side_container.number_input(input_title2, min_value=0., value=30.)
+        nframes = side_container.number_input('Number of Frames: ', min_value=0, value=1)
+        etc_calc = 'mag'
+        plot_subhead = 'Limiting Flux Required for Input SNR and input integration time per Spectral Flux Element:'
+        col1.write('Calculating Source Flux Required for input Integration Time and Input SNR' + calc_title)
 
     #   select flux type and input the source flux
     side_cont = side_container.beta_container()
     side_cont.subheader('Source Properties')
-    fl = side_cont.selectbox('Input Flux Method:', ['Magnitude', 'Flux Density','Integrated Flux over Bandpass'])
-    side_col1, side_col2 = side_cont.beta_columns([3, 1])
-    if fl == 'Magnitude':
-        mag = side_col1.number_input('Magnitude: ', value = 20.)
-        veg = side_col2.radio('Magnitude Standard:', ('Vega', 'AB'))
-        if veg == 'AB':
-            #ETC only takes vega input so this converts it from AB to vega, kinda silly.
-            ABconv = [["i", 0.7472, 0.37],
-                      ["z", 0.8917, 0.54],
-                      ["Y", 1.0305, 0.634],
-                      ["J", 1.2355, 0.91],
-                      ["H", 1.6458, 1.39],
-                      ["Ks", 2.1603, 1.85]]
-            ABwave = [i[1] for i in ABconv]
-            ABdelta = [i[2] for i in ABconv]
-            R_i = interpolate.interp1d(ABwave, ABdelta)
-            R_x = extrap1d(R_i)
-            delta = R_x([lmean / 1e3])
-            mag = mag - delta
+    if calc is not 'Limiting Flux':
+        fl = side_cont.selectbox('Input Flux Method:', ['Magnitude', 'Flux Density','Integrated Flux over Bandpass'])
+        side_col1, side_col2 = side_cont.beta_columns([3, 1])
+        if fl == 'Magnitude':
+            mag = side_col1.number_input('Magnitude: ', value = 20.)
+            veg = side_col2.radio('Magnitude Standard:', ('Vega', 'AB'))
+            if veg == 'AB':
+                #ETC only takes vega input so this converts it from AB to vega, kinda silly.
+                ABconv = [["i", 0.7472, 0.37],
+                          ["z", 0.8917, 0.54],
+                          ["Y", 1.0305, 0.634],
+                          ["J", 1.2355, 0.91],
+                          ["H", 1.6458, 1.39],
+                          ["Ks", 2.1603, 1.85]]
+                ABwave = [i[1] for i in ABconv]
+                ABdelta = [i[2] for i in ABconv]
+                R_i = interpolate.interp1d(ABwave, ABdelta)
+                R_x = extrap1d(R_i)
+                delta = R_x([lmean / 1e3])
+                mag = mag - delta
+            fint = None
+            flambda = None
+        elif fl == 'Flux Density':
+            flambda = side_cont.number_input('Ergs/s/cm^2/Angstrom * 10^-19: ', value=1.62)
+            flambda = flambda * 1e-19
+            fint = None
+            mag = None
+        elif fl =='Integrated Flux over Bandpass':
+            fint = side_cont.number_input('Ergs/s/cm^2 * 10^-17: ', value=4.)
+            fint = fint * 1e-17
+            flambda = None
+            mag = None
+    else:
         fint = None
-        flambda = None
-    elif fl == 'Flux Density':
-        flambda = side_cont.number_input('Ergs/s/cm^2/Angstrom * 10^-19: ', value=1.62)
-        flambda = flambda * 1e-19
-        fint = None
-        mag = None
-    elif fl =='Integrated Flux over Bandpass':
-        fint = side_cont.number_input('Ergs/s/cm^2 * 10^-17: ', value=4.)
-        fint = fint * 1e-17
         flambda = None
         mag = None
     filterdat = get_filterdat(filt, simdir=simdir, mode=mode)
@@ -352,10 +307,6 @@ def exec_gui(page_container=None, side_container=None):
         else:
             etc_prof = None
 
-    #   Print the configured options for user display
-    col1.write('Filter: ' + filt)
-    col1.write('Plate Scale: ' + scale)
-    col1.write('Field of View: ' + fov)
     if mode == 'IFS':
         col2.subheader('Available Liger Modes:')
         col2.dataframe(modes, height=200)
@@ -365,29 +316,29 @@ def exec_gui(page_container=None, side_container=None):
     else:
         spec = None
     #   plot the field of view in the second column, filter curve if it exists in the info directory
-    fov_img = plot_fov(fov)
-    if mode == 'Imager':
-        col2.image(fov_img, width=500, clamp=True)
-        filt_files = glob.glob(simdir+'/info/*_imag_*.dat')
-        filt_index = 0
-        for filt_file in filt_files:
-            if filt.lower() in filt_file.lower():
-                plot_filt = col2.button('Plot Filter Curve')
-                if plot_filt:
-                    filt_img = plot_filter(filt_files[filt_index])
-                    col2.plotly_chart(filt_img)
-            filt_index += 1
-    elif mode == 'IFS':
-        col2.image(fov_img, width=400, clamp=True)
-        filt_files = glob.glob(simdir + '/info/*_spec_*.dat')
-        filt_index = 0
-        for filt_file in filt_files:
-            if filt.lower() in filt_file.lower():
-                plot_filt = col1.button('Plot Filter Curve')
-                if plot_filt:
-                    filt_img = plot_filter(filt_files[filt_index])
-                    col1.plotly_chart(filt_img,)
-            filt_index += 1
+    # fov_img = plot_fov(fov)
+    # if mode == 'Imager':
+    #     col2.image(fov_img, width=500, clamp=True)
+    #     filt_files = glob.glob(simdir+'/info/*_imag_*.dat')
+    #     filt_index = 0
+    #     for filt_file in filt_files:
+    #         if filt.lower() in filt_file.lower():
+    #             plot_filt = col2.button('Plot Filter Curve')
+    #             if plot_filt:
+    #                 filt_img = plot_filter(filt_files[filt_index])
+    #                 col2.plotly_chart(filt_img)
+    #         filt_index += 1
+    # elif mode == 'IFS':
+    #     col2.image(fov_img, width=400, clamp=True)
+    #     filt_files = glob.glob(simdir + '/info/*_spec_*.dat')
+    #     filt_index = 0
+    #     for filt_file in filt_files:
+    #         if filt.lower() in filt_file.lower():
+    #             plot_filt = col1.button('Plot Filter Curve')
+    #             if plot_filt:
+    #                 filt_img = plot_filter(filt_files[filt_index])
+    #                 col1.plotly_chart(filt_img,)
+    #         filt_index += 1
 
 #   Deal with input spectrum
     if spec == 'Emission':
@@ -892,12 +843,23 @@ def exec_gui(page_container=None, side_container=None):
             tmp_download_link = download_link(specdf, 'my_input_spec.csv', 'Click Here to Download CSV: ' +
                                           'my_input_spec.csv')
             specol1.markdown(tmp_download_link, unsafe_allow_html=True)
-
     else:
         specinput = None
-    ##input PSF configuration
+
+    #   Define default radius value based on scale and lambda.
+    if etc_scale == 0.014:
+        radiusl = 1. * lmean * 1e2 * 206265 / (1.26e11)
+    elif etc_scale == 0.031:
+        radiusl = 1.5 * lmean * 1e2 * 206265 / (1.26e11)
+    elif etc_scale == 0.075:
+        radiusl = 20 * lmean * 1e2 * 206265 / (1.26e11)
+    else:
+        radiusl = 40 * lmean * 1e2 * 206265 / (1.26e11)
+
     with page_container.beta_container():
-        psf_col1, psf_col2 = page_container.beta_columns(2)
+
+        ##input PSF configuration
+        psf_col1, psf_col2 = st.beta_columns(2)
         psf_col1.subheader('Point Spread Function (PSF) Configuration:')
         psfmode = psf_col1.selectbox('Select PSF Option:', ['Generated Analytic PSF','Pre-generated LTAO PSF'])
         if psfmode == 'Pre-generated LTAO PSF':
@@ -925,101 +887,127 @@ def exec_gui(page_container=None, side_container=None):
             psf_input = None
             psf_loc = [float(xloc), float(yloc)]
         elif psfmode == 'Generated Analytic PSF':
-            with st.spinner('Generating PSF....'):
-                strehl = psf_col1.number_input('Strehl Ratio:', value = 0.5)
-                fried = psf_col1.number_input('Fried Parameter r0 (cm):', value = 20.)
-                lam_obs_psf = [lmin*10., lmean*10., lmax*10.]
-                wav = psf_col1.radio('PSF Wavelength:',['Monochromatic (Central Wavelength: '+str(lmean/1e3)+'um)',
-                    'Averaged over Bandpass ('+str(lmin/1e3)+'um, '+str(lmean/1e3)+'um, '+str(lmax/1e3)+'um)'])
-                if wav == 'Monochromatic (Central Wavelength: '+str(lmean/1e3)+'um)':
-                    lam_obs_psf = lam_obs_psf[1]
-                elif wav == 'Averaged over Bandpass ('+str(lmin/1e3)+'um, '+str(lmean/1e3)+'um, '+str(lmax/1e3)+'um)':
-                    lam_obs_psf = lam_obs_psf
-                # wfe = col1.number_input('Additional Input Wavefront Error (nm):',value=0.)
-                # blurring = col1.checkbox('Include Gaussian Blurring')
-                # if blurring is not None:
-                #     blur = True
-
-                psf_input = analytic_psf(strehl, lam_obs_psf, etc_scale, fried_parameter=fried, verbose=False, stack=True,
-                                         simdir=simdir)
-                psf_input = psf_input[-1]/np.sum(psf_input[-1])
-                psf_loc = None
-                psf_col2.subheader('PSF Preview:')
-                s = np.shape(psf_input)
-                logscale = lambda a, im: np.log10(a * (im / np.max(im)) + 1.0) / (np.log10(a))
-                psf_col2.image(logscale(1000., np.abs(
-                    psf_input[int(s[0] / 2 - 20):int(s[0] / 2 + 20), int(s[1] / 2 - 20):int(s[1] / 2 + 20)])),
-                               clamp=True, caption='Generated PSF (Central ' + str(40. * etc_scale)[
-                                                                               0:4] + ' arcseconds) - Log Scale',
-                               width=250)
-                psf_col2.markdown('[KAPA Strehl Calculator](http://bhs.astro.berkeley.edu/cgi-bin/kapa_strehl)')
-    page_container.write('--------------------------------------------------------------------------')
-
-    #   Define default radius value based on scale and lambda.
-    if etc_scale == 0.014:
-        radiusl = 1. * lmean*1e2 * 206265 / (1.26e11)
-    elif etc_scale == 0.031:
-        radiusl = 1.5 * lmean*1e2 * 206265 / (1.26e11)
-    elif etc_scale == 0.075:
-        radiusl = 20 * lmean*1e2 * 206265 / (1.26e11)
-    else:
-        radiusl = 40 * lmean*1e2 * 206265 / (1.26e11)
-
-    #   Container for Results and result plots.
-    with page_container.beta_container():
-        col3, col4 = page_container.beta_columns(2)
-        col3.subheader('Liger Calculation Results:')
-        #   Calculation
-        aperture = col3.slider(label='Aperture Radius (arcseconds):', min_value=0.01,
-                               max_value=float(np.min(etc_fov)/2.),
-                               value=float(np.min([float(radiusl), np.min(etc_fov)/2.])))
-        if aperture/etc_scale < 1: col2.markdown('WARNING: You have selected an aperture radius less than 1 pixel.')
-        if col3.button('CLICK HERE to Calculate Liger Results'):
-            res, fig, csvarr = LIGER_ETC(filter=filt, mag=mag, flambda=flambda,
-                                 fint=fint, itime=itime,nframes=nframes, snr=snr,
-                                 aperture=aperture, gain=3.04, readnoise=7., darkcurrent=0.05,
-                                 scale=etc_scale, resolution=4000, collarea=78.5, positions=[0, 0],
-                                 bgmag=None, efftot=None, mode=mode.lower(), calc=etc_calc,
-                                 spectrum=spec, specinput=specinput, lam_obs=lam_obs, line_width=line_width,
-                                 png_output=None, source=etc_source, profile=etc_prof, source_size=0.2,
-                                 csv_output=True, fov = etc_fov, psf_loc=psf_loc,
-                                 psf_time=1.4, verb=1, psf_input=psf_input, simdir=simdir, psfdir=psfdir, test=0)
-            #   parse the results into a nice readable format and write them into the two columns
-            val_lens = np.array([len(i) for i in res.values()])
-            ind = np.where(val_lens > 0)[0]
-            vals = list(res.values())
-            keys = list(res.keys())
-            for i in ind:
-                string = str(keys[i]) + ': ' + str(vals[i])
-                col3.write(string)
-            if (mode == 'Imager' and etc_source == 'extended' and prof_type != 'Sersic Profile'):
-                col4.write('The extended-source simulation assumes a perfectly even brightness ' +
-                           'distribution, so there is no meaningful simulated image.')
-            elif mode == 'Imager':
-                col4.subheader('Simulated Image:')
-                col4.plotly_chart(fig)
-            else:
-                col4.subheader('Simulated ' + plot_subhead)
-                col4.plotly_chart(fig)
-                col4.markdown('**The plot above is interactive!**')
-            if mode == 'IFS':
-                if etc_calc == 'exptime':
-                    header = "Wavelength(microns),Int_Time_PeakFlux(s),Int_Time_MedianFlux(s)," \
-                             "Int_Time_MeanFlux(s),Int_Time_Total_Aperture_Flux(s)"
-                    csvlabel = 'inputSNR' + str(int(snr))
-                elif etc_calc == 'snr':
-                    header = "Wavelength(microns),SNR_Peak,SNR_Median,SNR_Mean,SNR_Aperture_Total"
-                    csvlabel = 'inputITime' + str(int(itime*nframes))
-                df = pd.DataFrame(csvarr, columns=header.split(','))
-                if fl == 'Magnitude':
-                    csv_mag = veg + 'Mag' + str(int(mag))
-                elif fl == 'Flux Density':
-                    csv_mag = 'Flambda' + str(flambda*1e19)[0:4] + 'e19'
-                elif fl == 'Integrated Flux over Bandpass':
-                    csv_mag = 'Fint' + str(fint * 1e17)[0:4] + 'e17'
-                csv_title = 'Liger_' + mode + '_ETC_' + etc_calc + '_' + filt + '_' + scale + \
-                            '_' + csvlabel + '_' + etc_source + '_' + csv_mag
-                tmp_download_link = download_link(df, csv_title + '.csv',
-                                                  'Click Here to Download CSV: ' +
-                                                  csv_title + '.csv')
-                col4.markdown(tmp_download_link, unsafe_allow_html=True)
+            strehl = psf_col1.number_input('Strehl Ratio:', value = 0.5)
+            fried = psf_col1.number_input('Fried Parameter r0 (cm):', value = 20.)
+            lam_obs_psf = [lmin*10., lmean*10., lmax*10.]
+            wav = psf_col1.radio('PSF Wavelength:',['Monochromatic (Central Wavelength: '+str(lmean/1e3)+'um)',
+                'Averaged over Bandpass ('+str(lmin/1e3)+'um, '+str(lmean/1e3)+'um, '+str(lmax/1e3)+'um)'])
+            if wav == 'Monochromatic (Central Wavelength: '+str(lmean/1e3)+'um)':
+                lam_obs_psf = lam_obs_psf[1]
+            elif wav == 'Averaged over Bandpass ('+str(lmin/1e3)+'um, '+str(lmean/1e3)+'um, '+str(lmax/1e3)+'um)':
+                lam_obs_psf = lam_obs_psf
+            # wfe = col1.number_input('Additional Input Wavefront Error (nm):',value=0.)
+            # blurring = col1.checkbox('Include Gaussian Blurring')
+            # if blurring is not None:
+            #     blur = True
+            psf_col2.markdown('[KAPA Strehl Calculator](http://bhs.astro.berkeley.edu/cgi-bin/kapa_strehl)')
+        with st.form(key='calc_form'):
+            col3, col4 = st.beta_columns(2)
+            col3.subheader('Liger Calculation Results:')
+            #   Calculation
+            aperture = col3.slider(label='Aperture Radius (arcseconds):', min_value=0.001,
+                                   max_value=float(np.min(etc_fov)/2.),
+                                   value=float(np.min([float(radiusl), np.min(etc_fov)/2.])))
+            if aperture/etc_scale < 1: col3.markdown('WARNING: You have selected an aperture radius less than 1 pixel.')
+            sim_mode = col3.checkbox('Plot SNR over Aperture Radius (long calculation time)')
+            calc_submit = col3.form_submit_button('CLICK HERE to Calculate Liger Results')
+            if calc_submit:
+                if psfmode == 'Generated Analytic PSF':
+                    with st.spinner('Generating PSF....'):
+                        psf_loc = None
+                        psf_input = analytic_psf(strehl, lam_obs_psf, etc_scale, fried_parameter=fried, verbose=False,
+                                                 stack=True,
+                                                 simdir=simdir)
+                        psf_input = psf_input[-1] / np.sum(psf_input[-1])
+                        psf_col2.subheader('PSF Preview:')
+                        s = np.shape(psf_input)
+                        logscale = lambda a, im: np.log10(a * (im / np.max(im)) + 1.0) / (np.log10(a))
+                        psf_col2.image(logscale(1000., np.abs(
+                            psf_input[int(s[0] / 2 - 20):int(s[0] / 2 + 20), int(s[1] / 2 - 20):int(s[1] / 2 + 20)])),
+                                       clamp=True, caption='Generated PSF (Central ' + str(40. * etc_scale)[
+                                                                                       0:4] + ' arcseconds) - Log Scale',
+                                       width=250)
+                res, fig, csvarr = LIGER_ETC(filter=filt, mag=mag, flambda=flambda, fint=fint, itime=itime,
+                                             nframes=nframes, snr=snr, aperture=aperture, gain=3.04, readnoise=7.,
+                                             darkcurrent=0.05, scale=etc_scale, resolution=4000, collarea=collarea,
+                                             positions=[0, 0], eff_factor=eff_factor, bgmag=None, efftot=efftot,
+                                             mode=mode.lower(), calc=etc_calc, flux_units=flux_units, spectrum=spec,
+                                             specinput=specinput, lam_obs=lam_obs, line_width=line_width,
+                                             png_output=None, source=etc_source, profile=etc_prof, source_size=0.2,
+                                             csv_output=True, fov=etc_fov, psf_loc=psf_loc, mag_calc=mag_calc,
+                                             psf_time=1.4, verb=1, psf_input=psf_input, simdir=simdir, psfdir=psfdir,
+                                             test=0)
+                #   parse the results into a nice readable format and write them into the two columns
+                val_lens = np.array([len(i) for i in res.values()])
+                ind = np.where(val_lens > 0)[0]
+                vals = list(res.values())
+                keys = list(res.keys())
+                for i in ind:
+                    string = str(keys[i]) + ': ' + str(vals[i])
+                    col3.write(string)
+                if (mode == 'Imager' and etc_source == 'extended' and prof_type != 'Sersic Profile'):
+                    col4.write('The extended-source simulation assumes a perfectly even brightness ' +
+                               'distribution, so there is no meaningful simulated image.')
+                elif mode == 'Imager':
+                    col4.subheader('Simulated Image:')
+                    col4.plotly_chart(fig)
+                    if sim_mode:
+                        tmtImage, noisetotal = LIGER_ETC(filter=filt, mag=mag, flambda=flambda,
+                                     fint=fint, itime=itime,nframes=nframes, snr=snr,
+                                     aperture=aperture, gain=3.04, readnoise=7., darkcurrent=0.05,
+                                     scale=etc_scale, resolution=4000, collarea=78.5, positions=[0, 0],
+                                     bgmag=None, efftot=None, mode=mode.lower(), calc=etc_calc, flux_units=flux_units,
+                                     spectrum=spec, specinput=specinput, lam_obs=lam_obs, line_width=line_width,
+                                     png_output=None, source=etc_source, profile=etc_prof, source_size=0.2,
+                                     csv_output=True, fov = etc_fov, psf_loc=psf_loc, sim_image=True ,
+                                     psf_time=1.4, verb=1, psf_input=psf_input, simdir=simdir, psfdir=psfdir, test=0)
+                        flatarray = np.ones(tmtImage.shape)
+                        xs, ys = np.array(tmtImage.shape)/2.
+                        radii = np.linspace(0.001, float(np.min(etc_fov)/2.), num=int(10*(np.min(etc_fov)/2.)))
+                        snrval = np.array([])
+                        for radius in radii:
+                            radius /= etc_scale
+                            aperture = CircularAperture([xs, ys], r=radius)
+                            mask = aperture.to_mask(method='exact')
+                            data_cutout_aperl = mask.multiply(tmtImage)  # in version 0.4 of photutils
+                            noise_cutout_aperl = mask.multiply(flatarray) * noisetotal
+                            aper_totsuml = data_cutout_aperl.sum() + noise_cutout_aperl.sum()
+                            aper_suml = data_cutout_aperl.sum()
+                            # Change to more classical sum for SNR rather than using phot_table
+                            snr_int = (aper_suml * np.sqrt(nframes * itime)) / (np.sqrt(aper_totsuml))
+                            snrval = np.append(snrval, snr_int)
+                        snrfig = go.Figure()
+                        snrfig.add_trace(go.Scatter(x=radii, y=snrval))
+                        snrfig.update_layout(yaxis_title='SNR', xaxis_title='Aperture Radius (Arcseconds)',
+                                                    title='SNR over Aperture Radius')
+                        col4.plotly_chart(snrfig)
+                else:
+                    col4.subheader('Simulated ' + plot_subhead)
+                    col4.plotly_chart(fig)
+                    col4.markdown('**The plot above is interactive!**')
+                if mode == 'IFS':
+                    if etc_calc == 'exptime':
+                        header = "Wavelength(microns),Int_Time_PeakFlux(s),Int_Time_MedianFlux(s)," \
+                                 "Int_Time_MeanFlux(s),Int_Time_Total_Aperture_Flux(s)"
+                        csvlabel = 'inputSNR' + str(int(snr))
+                    elif etc_calc == 'snr':
+                        header = "Wavelength(microns),SNR_Peak,SNR_Median,SNR_Mean,SNR_Aperture_Total"
+                        csvlabel = 'inputITime' + str(int(itime*nframes))
+                    elif etc_calc == 'mag':
+                        header = "Wavelength(microns),Flux_Peak,Flux_Median,Flux_Mean,Flux_Aperture_Total"
+                        csvlabel = 'inputITime' + str(int(itime * nframes))
+                    df = pd.DataFrame(csvarr, columns=header.split(','))
+                    if fl == 'Magnitude':
+                        csv_mag = veg + 'Mag' + str(int(mag))
+                    elif fl == 'Flux Density':
+                        csv_mag = 'Flambda' + str(flambda*1e19)[0:4] + 'e19'
+                    elif fl == 'Integrated Flux over Bandpass':
+                        csv_mag = 'Fint' + str(fint * 1e17)[0:4] + 'e17'
+                    if fl is None:
+                        csv_mag = 'lim_mag_for' + str(snr) + 'SNR'
+                    csv_title = 'Liger_' + mode + '_ETC_' + etc_calc + '_' + filt + '_' + str(scale) + 'mas' + \
+                                '_' + csvlabel + '_' + etc_source + '_' + csv_mag
+                    tmp_download_link = download_link(df, csv_title + '.csv',
+                                                      'Click Here to Download CSV: ' +
+                                                      csv_title + '.csv')
+                    col4.markdown(tmp_download_link, unsafe_allow_html=True)

@@ -65,7 +65,7 @@ def crop_center(img, cropx, cropy):
     starty = y // 2 - (cropy // 2)
     return img[starty:starty + cropy, startx:startx + cropx]
 
-@st.cache(hash_funcs={complex: hash})
+@st.cache(hash_funcs={complex: hash}, show_spinner=False)
 def analytic_psf(strehl, lvals, plate_scale, fried_parameter=20, verbose=False, stack=False, simdir='~/'):
     """
 

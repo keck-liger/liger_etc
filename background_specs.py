@@ -77,8 +77,8 @@ class background_specs3():
     def __init__(self, resolution, filter, T_tel = 275, T_atm = 258.0,
                  T_aos = 273.0, T_zod=5800.0, Em_tel = 0.20, Em_atm = 0.2,
                  Em_aos=0.35, Em_zod = 3e-14*49.0, fullbb = False, airmass='10', vapor='15',
-                 fullcont=False, fulloh = False, fullback = False,
-                 convolve = True, noconvolve = False, ohsim = True, verb = 0,
+                 fullcont=False, fulloh = False, fullback = False, no_oh=True,
+                 convolve = True, noconvolve = False, ohsim=True, verb = 0,
                  simdir='~/data/osiris/sim/', filteronly = False):
     # ignore the atmospheric BB and Zodiacal light for now since
     #we're going to be using Gemini
@@ -202,7 +202,10 @@ class background_specs3():
             linestrengths = np.array(ohlines[:, 1])
             goodCenters = np.where((linecenters >= wi) & (linecenters <= wf) & (linestrengths > 0.))
             linecenters = linecenters[goodCenters]
-            linestrengths = linestrengths[goodCenters]
+            if no_oh:
+                linestrengths = linestrengths[goodCenters] * 0.
+            else:
+                linestrengths = linestrengths[goodCenters]
             ohflux = np.zeros((len(wavelength)))
             for i in range(0, len(linecenters)):
                 ohflux = ohflux + sim_inst_scatter(wavelength, linecenters[i], strength=linestrengths[i])
@@ -241,6 +244,9 @@ class background_specs3():
                 geminiSpec = np.convolve(geminiSpec, psf, mode='same')
             # interpolate Gemini data to that of OSIRIS
             geminiOrig = geminiSpec
+            if np.min(geminiWave) > np.min(wavelength):
+                geminiWave = np.append(np.array([np.min(wavelength)]), geminiWave)
+                geminiSpec = np.append(np.array([0]), geminiSpec)
             R_i = interpolate.interp1d(geminiWave,geminiSpec)
             R_x = extrap1d(R_i)
             geminiSpec = R_x(wavelength)

@@ -161,6 +161,21 @@ def ab2vega(mag, lmean=2000.):
     mag = mag - delta
     return mag
 
+def vega2ab(mag, lmean=2000.):
+    ABconv = [["i", 0.7472, 0.37],
+              ["z", 0.8917, 0.54],
+              ["Y", 1.0305, 0.634],
+              ["J", 1.2355, 0.91],
+              ["H", 1.6458, 1.39],
+              ["Ks", 2.1603, 1.85]]
+    ABwave = [i[1] for i in ABconv]
+    ABdelta = [i[2] for i in ABconv]
+    R_i = interpolate.interp1d(ABwave, ABdelta)
+    R_x = extrap1d(R_i)
+    delta = R_x([lmean / 1e3])
+    mag = mag + delta
+    return mag
+
 def gen_spec(spec1, filt='K', wave=None, scale=None, fint=None, flambda=None, mag=None, source=None,
              simdir='~/osiris/sim', lam_obs=None, line_width=None, mode='ifs', teff='6000', logg='0.0', feh='-0.0',
              aom='0.0', temp=6000, specname=None):

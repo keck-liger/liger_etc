@@ -119,6 +119,7 @@ def exec_gui(page_container=None, side_container=None):
     else:
         default_fov = st.session_state.fov
     fov = col1.text_input('Field of View in [x]" x [y]"', value=default_fov)
+    st.session_state.fov = fov
     collarea = col2.number_input('Telescope Collecting Area in m^2:', value=78.5)
     tput = col2.radio('Throughput Configuration:', ['Default', 'Enter Total Throughput', 'Enter Throughput Factor'])
     if tput == 'Default':
@@ -130,6 +131,30 @@ def exec_gui(page_container=None, side_container=None):
     elif tput == 'Enter Throughput Factor':
         efftot=None
         eff_factor = col2.number_input('Throughput Factor', value = 0.9)
+    if 'noise_factor' not in st.session_state:
+        default_noise_f = 1.
+    else:
+        default_noise_f = st.session_state.noise_factor
+    noise_factor = col2.number_input('Noise Factor:', value=default_noise_f)
+    st.session_state.noise_factor = noise_factor
+    if 'readnoise' not in st.session_state:
+        default_readnoise = 7.
+    else:
+        default_readnoise = st.session_state.readnoise
+    readnoise = col1.number_input('Read Noise (e-)', value=default_readnoise)
+    st.session_state.readnoise = readnoise
+    if 'darkcurrent' not in st.session_state:
+        default_darkc = 0.05
+    else:
+        default_darkc = st.session_state.darkcurrent
+    darkcurrent = col1.number_input('Dark Current (e-/s)', value=default_darkc)
+    st.session_state.darkcurrent = darkcurrent
+    if 'resolution' not in st.session_state:
+        default_resolution = 4000.
+    else:
+        default_resolution = st.session_state.resolution
+    resolution = col2.number_input('Resolution:', value=default_resolution)
+    st.session_state.resolution = resolution
     #   select the mode for the ETC -- Imager or IFS
     side_container.title('Exposure / Signal-To-Noise Setup')
     mode = side_container.radio("Please Select Liger Mode", ['IFS', 'Imager'])
@@ -159,11 +184,9 @@ def exec_gui(page_container=None, side_container=None):
     lmin = float(lmin)
     lmax = float(lmax)
     lmean = np.mean([lmin, lmax])
-
     #   Convert selected values to inputs for ETC code
     etc_scale = float(scale)*1e-3
     etc_fov = [float(fov.split('x')[0]), float(fov.split('x')[1])]
-
     #   Setup for more configuration of ETC code
     calc = side_container.radio('Calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time', 'Limiting Flux'])
     if 'snr' not in st.session_state:
@@ -224,11 +247,11 @@ def exec_gui(page_container=None, side_container=None):
         etc_calc = 'mag'
         plot_subhead = 'Limiting Flux Required for Input SNR and input integration time per Spectral Flux Element:'
         col1.write('Calculating Source Flux Required for input Integration Time and Input SNR' + calc_title)
-
+    st.session_state.snr = snr
     #   select flux type and input the source flux
     side_cont = side_container.beta_container()
     side_cont.subheader('Source Properties')
-    if calc is not 'Limiting Flux':
+    if calc != 'Limiting Flux':
         fl = side_cont.selectbox('Input Flux Method:', ['Magnitude', 'Flux Density','Integrated Flux over Bandpass'])
         side_col1, side_col2 = side_cont.beta_columns([3, 1])
         if fl == 'Magnitude':
@@ -308,8 +331,8 @@ def exec_gui(page_container=None, side_container=None):
             etc_prof = None
 
     if mode == 'IFS':
-        col2.subheader('Available Liger Modes:')
-        col2.dataframe(modes, height=200)
+        # col2.subheader('Available Liger Modes:')
+        # col2.dataframe(modes, height=200)
         spec = side_container.selectbox('Spectrum Shape:',
                                         ['Vega', 'Flat', 'Emission', 'Phoenix Stellar Library Spectrum', 'Black Body',
                                          'Stellar Population Spectra - Maraston & Stromback (2011)','Custom', 'Upload'])
@@ -905,9 +928,10 @@ def exec_gui(page_container=None, side_container=None):
             col3, col4 = st.beta_columns(2)
             col3.subheader('Liger Calculation Results:')
             #   Calculation
-            aperture = col3.slider(label='Aperture Radius (arcseconds):', min_value=0.001,
-                                   max_value=float(np.min(etc_fov)/2.),
-                                   value=float(np.min([float(radiusl), np.min(etc_fov)/2.])))
+            aperture = col3.slider(label='Aperture Radius (miliarcseconds):', min_value=1.,
+                                   max_value=float(np.min(etc_fov)*1e3/2.),
+                                   value=float(np.min([float(radiusl), np.min(etc_fov)/2.])*1e3))
+            aperture *= 1e-3
             if aperture/etc_scale < 1: col3.markdown('WARNING: You have selected an aperture radius less than 1 pixel.')
             sim_mode = col3.checkbox('Plot SNR over Aperture Radius (long calculation time)')
             calc_submit = col3.form_submit_button('CLICK HERE to Calculate Liger Results')
@@ -927,9 +951,9 @@ def exec_gui(page_container=None, side_container=None):
                                        clamp=True, caption='Generated PSF (Central ' + str(40. * etc_scale)[
                                                                                        0:4] + ' arcseconds) - Log Scale',
                                        width=250)
-                res, fig, csvarr = LIGER_ETC(filter=filt, mag=mag, flambda=flambda, fint=fint, itime=itime,
-                                             nframes=nframes, snr=snr, aperture=aperture, gain=3.04, readnoise=7.,
-                                             darkcurrent=0.05, scale=etc_scale, resolution=4000, collarea=collarea,
+                res, fig, csvarr = LIGER_ETC(filter=filt, mag=mag, flambda=flambda, fint=fint, itime=itime, noise_factor=noise_factor,
+                                             nframes=nframes, snr=snr, aperture=aperture, gain=3.04, readnoise=readnoise,
+                                             darkcurrent=darkcurrent, scale=etc_scale, resolution=4000, collarea=collarea,
                                              positions=[0, 0], eff_factor=eff_factor, bgmag=None, efftot=efftot,
                                              mode=mode.lower(), calc=etc_calc, flux_units=flux_units, spectrum=spec,
                                              specinput=specinput, lam_obs=lam_obs, line_width=line_width,
@@ -954,9 +978,9 @@ def exec_gui(page_container=None, side_container=None):
                     if sim_mode:
                         tmtImage, noisetotal = LIGER_ETC(filter=filt, mag=mag, flambda=flambda,
                                      fint=fint, itime=itime,nframes=nframes, snr=snr,
-                                     aperture=aperture, gain=3.04, readnoise=7., darkcurrent=0.05,
-                                     scale=etc_scale, resolution=4000, collarea=78.5, positions=[0, 0],
-                                     bgmag=None, efftot=None, mode=mode.lower(), calc=etc_calc, flux_units=flux_units,
+                                     aperture=aperture, gain=3.04, readnoise=readnoise, darkcurrent=darkcurrent,
+                                     scale=etc_scale, resolution=4000, collarea=collarea, positions=[0, 0],
+                                     bgmag=None, efftot=efftot, mode=mode.lower(), calc=etc_calc, flux_units=flux_units,
                                      spectrum=spec, specinput=specinput, lam_obs=lam_obs, line_width=line_width,
                                      png_output=None, source=etc_source, profile=etc_prof, source_size=0.2,
                                      csv_output=True, fov = etc_fov, psf_loc=psf_loc, sim_image=True ,

@@ -822,17 +822,22 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             # snr = observedCube*np.sqrt(itime*nframes)/np.sqrt(observedCube+noisetotal)
             # itime * nframes =  (snr * np.sqrt(observedCube+noisetotal)/observedCube)**2
             E_ph = (h*c)/(wave[:,np.newaxis,np.newaxis]*1e-4)
+            subimgcube = np.zeros(np.shape(cube))
+            for i in range(np.shape(cube)[0]):
+                subimgcube[i,:,:] = subimage
+            cube = (subimage * spec_temp[:, np.newaxis, np.newaxis]).astype(np.float32)
             if mag_calc == "peak":
-                snr_per_wav = snr * cube / (np.max(cube) * 1.)
+                snr_per_wav = snr * cube / (np.max(cube))
                 noisetotal = noisetotal / (1.)
             elif mag_calc == "total":
-                snr_per_wav = snr * cube / (intNorm * 1. * intFlux)
+                snr_per_wav = snr * cube / (intFlux)
                 noisetotal = noisetotal / (1.)
             elif mag_calc == "per_wav":
-                snr_per_wav = snr * cube / (intNorm * 1.)
+                snr_per_wav = snr * cube
                 noisetotal = noisetotal / (1.)
             fluxcube = (snr_per_wav ** 2. + snr_per_wav * np.sqrt(
                 snr_per_wav ** 2. + 4. * noisetotal * itime * nframes)) / (2. * itime * nframes)
+            fluxcube /= (subimgcube * efftot * collarea)
             peakSNR = ""
             medianSNR = ""
             meanSNR = ""
@@ -848,9 +853,9 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             #     cube = -2.5*np.log10(cube/zp)
             #     noisetotal = -2.5*np.log10(noisetotal/zp)
             if flux_units == 'ergs/s/cm2/um':
-                peakFlux = str("%0.1f *1e-17" %(np.max(fluxcube*E_ph*(1./(100*100))*1e17)))
-                meanFlux = str("%0.1f *1e-17" %(np.mean(fluxcube*E_ph*(1./(100*100))*1e17)))
-                medianFlux = str("%0.1f *1e-17" %(np.median(fluxcube*E_ph*(1./(100*100))*1e17)))
+                peakFlux = str("%0.1f *1e-17" %(np.max(fluxcube*(h*c)/(wave[:,np.newaxis,np.newaxis]*1e-4)*(1./(100*100))*1e17)))
+                meanFlux = str("%0.1f *1e-17" %(np.mean(fluxcube*(h*c)/(wave[:,np.newaxis,np.newaxis]*1e-4)*(1./(100*100))*1e17)))
+                medianFlux = str("%0.1f *1e-17" %(np.median(fluxcube*(h*c)/(wave[:,np.newaxis,np.newaxis]*1e-4)*(1./(100*100))*1e17)))
             else:
                 peakFlux = str("%0.1f" %np.max(fluxcube))
                 meanFlux = str("%0.1f" %np.mean(fluxcube))
@@ -868,6 +873,10 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             flux_aper = []
             noiseval = []
             noise_aper = []
+            onescube = np.ones(np.shape(cube))
+            onesval = []
+            ones_aper = []
+            ones_total = np.array([])
             for i in range(dxspectrum):
                 fluxslice = apermask.multiply(snr_per_wav[i, :, :])
                 fluxslice[np.where(non_zero == 0)] += np.min(fluxslice[np.where(non_zero > 0)])
@@ -877,26 +886,47 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 noiseslice[np.where(non_zero == 0)] += np.min(noiseslice[np.where(non_zero > 0)])
                 noiseval.append(np.sum(noiseslice))
                 noise_aper.append(noiseslice)
+                onesslice = apermask.multiply(onescube[i, :, :])
+                onesslice[np.where(non_zero == 0)] += np.min(onesslice[np.where(non_zero > 0)])
+                onesval.append(np.sum(onesslice))
+                ones_aper.append(onesslice)
+                ones_total = np.append(ones_total, np.sum(onescube[i, :, :]))
             fluxval = np.array(fluxval)
             noiseval = np.array(noiseval)
             flux_aper = np.array(flux_aper)
             noise_aper = np.array(noise_aper)
+            onesval = np.array(onesval)
+            ones_aper = np.array(ones_aper)
             flux_int = np.trapz(fluxval, x=wave)
             noise_int = np.trapz(noiseval, x=wave)
+            ones_int = np.trapz(onesval, x=wave)
+            ones_total_int = np.trapz(ones_total, x=wave)
             # itime_aper = (snr * np.sqrt(flux_aper + noise_aper) / flux_aper) ** 2
             flux_per_aper = (flux_aper ** 2. + flux_aper * np.sqrt(
                 flux_aper ** 2. + 4. * noise_aper * itime * nframes)) / (2. * itime * nframes)
+            flux_per_aper /= (collarea*efftot*(apermask.multiply(subimage)+ np.min(apermask.multiply(subimage)[np.where(non_zero > 0)])))
             # intflux_itime = (snr * np.sqrt(flux_int + noise_int) / flux_int) ** 2
             int_snr_flux = (flux_int ** 2. + flux_int * np.sqrt(
                 flux_int ** 2. + 4. * noise_int * itime * nframes)) / (2. * itime * nframes)
+            int_snr_flux /= (collarea*efftot*np.max(subimage))
+            int_snr_flux *= ones_total_int/ones_int
             to_flux_per = (fluxval ** 2. + fluxval * np.sqrt(
                 fluxval ** 2. + 4. * noiseval * itime * nframes)) / (2. * itime * nframes)
+            to_flux_per /= (collarea*efftot*np.max(subimage))
+            to_flux_per *= ones_total/onesval
+            if flux_units == 'ergs/s/cm2/um':
+                to_flux_per *= ((h*c)/(wave*1e-4))*(1./(100*100))
             totalSNRl = ""
             totalexptimel = ""  # integrated aperture exptime at pre-defined fixed aperture
-            snr_inst = snr / (collarea * efftot * 0.11)
+            snr_inst = snr #/ (collarea * efftot * np.max(subimage))
             totFlux = (snr_inst ** 2. + snr_inst * np.sqrt(
                 snr_inst ** 2. + 4. * (np.trapz(backtot, x=wave) + noise) * np.pi *
                 ((lambdac*1e-10)*206265/(12.6 * scale))**2. * itime * nframes)) / (2. * itime * nframes)
+            totFlux /= (collarea * efftot * np.max(subimage))
+            totfluxes = np.array([])
+            for i in range(len(wave)):
+                totfluxes = np.append(totfluxes, np.sum(fluxcube[i,:,:]))
+            totFlux = np.trapz(totfluxes, x=wave)
             fluxmag = str("%0.2f" % (-2.5 * np.log10(float(totFlux) / zp)))
             fluxmag_aper = str("%0.2f" % (-2.5 * np.log10(float(int_snr_flux) / zp)))
             if flux_units == 'ergs/s/cm2/um':
@@ -1200,6 +1230,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 snr_per_wav = snr * tmtImage / (np.sum(tmtImage))
             fluxcube = (snr_per_wav ** 2. + snr_per_wav * np.sqrt(
                 snr_per_wav ** 2. + 4. * noisetotal * itime * nframes)) / (2. * itime * nframes)
+            fluxcube /= (subimage * efftot * collarea)
             data_cutout_aper = mask.multiply(fluxcube)
             data_cutout_aperl = maskl.multiply(fluxcube)
             flatarray = np.ones(fluxcube.shape)
@@ -1276,12 +1307,12 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                             ('Median Value of SNR (Aperture Radius = ' + "{:.3f}".format(sizel/2.) + '")', medianSNRl),
                             ('Mean Value of SNR (Aperture Radius = ' + "{:.3f}".format(sizel/2.) + '")', meanSNRl),
                             ('Peak Value of required flux for input SNR', peakFlux),
-                            ('Integrated Total Limiting Flux for input SNR(Aperture Radius = ' + "{:.3f}".format(
+                            ('Integrated Total Limiting Flux for input SNR(For flux within Aperture Radius = ' + "{:.3f}".format(
                                 sizel / 2.) + '")', totalFlux_aper),
-                            ('Integrated Total Limiting Magnitude for input SNR"(Aperture Radius = ' + "{:.3f}".format(
+                            ('Integrated Total Limiting Magnitude for input SNR"(For flux within Aperture Radius = ' + "{:.3f}".format(
                                 sizel / 2.) + '")', fluxmag_aper),
-                            ('Integrated Total Source Limiting Flux for input SNR)', totalFlux),
-                            ('Integrated Total Source Limiting Magnitude for input SNR")', fluxmag),
+                            ('Integrated Total Source Limiting Flux for input SNR', totalFlux),
+                            ('Integrated Total Source Limiting Magnitude for input SNR"', fluxmag),
                             ('Median Value of SNR (Aperture Radius = 0.2")', medianSNR),
                             ('Mean Value of SNR (Aperture Radius = 0.2")', meanSNR),
                             ('Total integration time [s] to achieve SNR for '

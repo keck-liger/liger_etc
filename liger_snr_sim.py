@@ -835,10 +835,10 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 intsum = np.array([])
                 for i in range(len(wave)):
                     intsum = np.append(intsum, np.sum(cube[i,:,:]))
-                intsum = np.trapz(intsum, x=wave)
-                snr_cube = snr * cube/intsum
+                intcube = np.trapz(intsum, x=wave)
+                snr_cube = snr * cube/intcube
                 noisetotal = noisetotal
-                print('intsum:', intsum)
+                print('intcube:', intcube)
             elif mag_calc == "per_wav":
                 snr_cube = snr * cube
                 noisetotal = noisetotal

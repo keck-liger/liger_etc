@@ -121,16 +121,7 @@ def exec_gui(page_container=None, side_container=None):
     fov = col1.text_input('Field of View in [x]" x [y]"', value=default_fov)
     st.session_state.fov = fov
     collarea = col2.number_input('Telescope Collecting Area in m^2:', value=78.5)
-    tput = col2.radio('Throughput Configuration:', ['Default', 'Enter Total Throughput', 'Enter Throughput Factor'])
-    if tput == 'Default':
-        efftot = None
-        eff_factor = None
-    elif tput == 'Enter Total Throughput':
-        efftot = col2.number_input('Bandpass Throughput', value=0.4)
-        eff_factor = None
-    elif tput == 'Enter Throughput Factor':
-        efftot=None
-        eff_factor = col2.number_input('Throughput Factor', value = 0.9)
+    tput = col2.radio('Throughput Configuration:', ['Default', 'Enter Total Throughput', 'Enter Throughput Factor', 'OSIRIS'])
     #if 'noise_factor' not in st.session_state:
     default_noise_f = 1.
     #else:
@@ -187,6 +178,36 @@ def exec_gui(page_container=None, side_container=None):
     #   Convert selected values to inputs for ETC code
     etc_scale = float(scale)*1e-3
     etc_fov = [float(fov.split('x')[0]), float(fov.split('x')[1])]
+
+    if tput == 'Default':
+        efftot = None
+        eff_factor = None
+    elif tput == 'Enter Total Throughput':
+        efftot = col2.number_input('Bandpass Throughput', value=0.4)
+        eff_factor = None
+    elif tput == 'Enter Throughput Factor':
+        efftot=None
+        eff_factor = col2.number_input('Throughput Factor', value = 0.9)
+    elif tput ==' OSIRIS':
+        teltot = 0.65
+        aotot = 0.80
+        wav = [830, 900, 2000, 2200, 2300, 2412]  # nm
+        # return(fov, type(fov), scale, type(scale))
+        imagesize = np.array(etc_fov) / etc_scale
+        if mode == "imager":
+            tput = [0.22, 0.22, 0.29, 0.29, 0.29, 0.29]  # imager
+        else:
+            tput = [0.15, 0.15, 0.2, 0.2, 0.2, 0.2]  # IFS lenslet
+        dxspectrum = int(ceil(log10(lmax / lmin) / log10(1.0 + 1.0 / (resolution * 2.0))))
+        ## resolution times 2 to get nyquist sampled
+        crval1 = lmin / 10.  # nm
+        cdelt1 = ((lmax - lmin) / dxspectrum) / 10.  # nm/channel
+        w = (np.arange(dxspectrum) + 1) * cdelt1 + crval1  # compute wavelength
+        R = interpolate.interp1d(wav, tput, fill_value='extrapolate')
+        eff_lambda = [R(w0) for w0 in w]
+        instot = np.mean(eff_lambda)
+        efftot = instot * teltot * aotot
+
     #   Setup for more configuration of ETC code
     calc = side_container.radio('Calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time', 'Limiting Flux'])
     #if 'snr' not in st.session_state:

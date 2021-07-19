@@ -207,7 +207,7 @@ def exec_gui(page_container=None, side_container=None):
         eff_lambda = [R(w0) for w0 in w]
         instot = np.mean(eff_lambda)
         efftot = instot * teltot * aotot
-
+        eff_factor = None
     #   Setup for more configuration of ETC code
     calc = side_container.radio('Calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time', 'Limiting Flux'])
     #if 'snr' not in st.session_state:

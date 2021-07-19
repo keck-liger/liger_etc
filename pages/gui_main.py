@@ -131,30 +131,30 @@ def exec_gui(page_container=None, side_container=None):
     elif tput == 'Enter Throughput Factor':
         efftot=None
         eff_factor = col2.number_input('Throughput Factor', value = 0.9)
-    if 'noise_factor' not in st.session_state:
-        default_noise_f = 1.
-    else:
-        default_noise_f = st.session_state.noise_factor
+    #if 'noise_factor' not in st.session_state:
+    default_noise_f = 1.
+    #else:
+    #    default_noise_f = st.session_state.noise_factor
     noise_factor = col2.number_input('Noise Factor:', value=default_noise_f)
-    st.session_state.noise_factor = noise_factor
-    if 'readnoise' not in st.session_state:
-        default_readnoise = 7.
-    else:
-        default_readnoise = st.session_state.readnoise
+    #st.session_state.noise_factor = noise_factor
+    #if 'readnoise' not in st.session_state:
+    default_readnoise = 7.
+    #else:
+    #    default_readnoise = st.session_state.readnoise
     readnoise = col1.number_input('Read Noise (e-)', value=default_readnoise)
-    st.session_state.readnoise = readnoise
-    if 'darkcurrent' not in st.session_state:
-        default_darkc = 0.05
-    else:
-        default_darkc = st.session_state.darkcurrent
+    #st.session_state.readnoise = readnoise
+    #if 'darkcurrent' not in st.session_state:
+    default_darkc = 0.05
+    #else:
+    #    default_darkc = st.session_state.darkcurrent
     darkcurrent = col1.number_input('Dark Current (e-/s)', value=default_darkc)
-    st.session_state.darkcurrent = darkcurrent
-    if 'resolution' not in st.session_state:
-        default_resolution = 4000.
-    else:
-        default_resolution = st.session_state.resolution
+    #st.session_state.darkcurrent = darkcurrent
+    #if 'resolution' not in st.session_state:
+    default_resolution = 4000.
+    #else:
+    #    default_resolution = st.session_state.resolution
     resolution = col2.number_input('Resolution:', value=default_resolution)
-    st.session_state.resolution = resolution
+    #st.session_state.resolution = resolution
     #   select the mode for the ETC -- Imager or IFS
     side_container.title('Exposure / Signal-To-Noise Setup')
     mode = side_container.radio("Please Select Liger Mode", ['IFS', 'Imager'])
@@ -189,10 +189,10 @@ def exec_gui(page_container=None, side_container=None):
     etc_fov = [float(fov.split('x')[0]), float(fov.split('x')[1])]
     #   Setup for more configuration of ETC code
     calc = side_container.radio('Calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time', 'Limiting Flux'])
-    if 'snr' not in st.session_state:
-        snr_default = 5.
-    else:
-        snr_default = st.session_state.snr
+    #if 'snr' not in st.session_state:
+    snr_default = 5.
+    #else:
+    #    snr_default = st.session_state.snr
     if calc == 'Signal-to-Noise Ratio (SNR)':
         if mode == 'Imager':
             input_title = 'Frame Integration Time (Seconds) per Bandpass: '
@@ -247,7 +247,7 @@ def exec_gui(page_container=None, side_container=None):
         etc_calc = 'mag'
         plot_subhead = 'Limiting Flux Required for Input SNR and input integration time per Spectral Flux Element:'
         col1.write('Calculating Source Flux Required for input Integration Time and Input SNR' + calc_title)
-    st.session_state.snr = snr
+    #st.session_state.snr = snr
     #   select flux type and input the source flux
     side_cont = side_container.beta_container()
     side_cont.subheader('Source Properties')
@@ -953,7 +953,7 @@ def exec_gui(page_container=None, side_container=None):
                                        width=250)
                 res, fig, csvarr = LIGER_ETC(filter=filt, mag=mag, flambda=flambda, fint=fint, itime=itime, noise_factor=noise_factor,
                                              nframes=nframes, snr=snr, aperture=aperture, gain=3.04, readnoise=readnoise,
-                                             darkcurrent=darkcurrent, scale=etc_scale, resolution=4000, collarea=collarea,
+                                             darkcurrent=darkcurrent, scale=etc_scale, resolution=resolution, collarea=collarea,
                                              positions=[0, 0], eff_factor=eff_factor, bgmag=None, efftot=efftot,
                                              mode=mode.lower(), calc=etc_calc, flux_units=flux_units, spectrum=spec,
                                              specinput=specinput, lam_obs=lam_obs, line_width=line_width,

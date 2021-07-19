@@ -121,7 +121,7 @@ def exec_gui(page_container=None, side_container=None):
     fov = col1.text_input('Field of View in [x]" x [y]"', value=default_fov)
     st.session_state.fov = fov
     collarea = col2.number_input('Telescope Collecting Area in m^2:', value=78.5)
-    tput = col2.radio('Throughput Configuration:', ['Default', 'Enter Total Throughput', 'Enter Throughput Factor', 'OSIRIS'])
+
     #if 'noise_factor' not in st.session_state:
     default_noise_f = 1.
     #else:
@@ -178,7 +178,8 @@ def exec_gui(page_container=None, side_container=None):
     #   Convert selected values to inputs for ETC code
     etc_scale = float(scale)*1e-3
     etc_fov = [float(fov.split('x')[0]), float(fov.split('x')[1])]
-
+    tput = col2.radio('Throughput Configuration:',
+                      ['Default', 'Enter Total Throughput', 'Enter Throughput Factor', 'OSIRIS'])
     if tput == 'Default':
         efftot = None
         eff_factor = None

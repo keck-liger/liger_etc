@@ -200,8 +200,8 @@ def exec_gui(page_container=None, side_container=None):
             tput = [0.15, 0.15, 0.2, 0.2, 0.2, 0.2]  # IFS lenslet
         dxspectrum = int(ceil(log10(lmax / lmin) / log10(1.0 + 1.0 / (resolution * 2.0))))
         ## resolution times 2 to get nyquist sampled
-        crval1 = lmin / 10.  # nm
-        cdelt1 = ((lmax - lmin) / dxspectrum) / 10.  # nm/channel
+        crval1 = lmin  # nm
+        cdelt1 = ((lmax - lmin) / dxspectrum)  # nm/channel
         w = (np.arange(dxspectrum) + 1) * cdelt1 + crval1  # compute wavelength
         R = interpolate.interp1d(wav, tput, fill_value='extrapolate')
         eff_lambda = [R(w0) for w0 in w]

@@ -188,7 +188,7 @@ def exec_gui(page_container=None, side_container=None):
     elif tput == 'Enter Throughput Factor':
         efftot=None
         eff_factor = col2.number_input('Throughput Factor', value = 0.9)
-    elif tput ==' OSIRIS':
+    elif tput =='OSIRIS':
         teltot = 0.65
         aotot = 0.80
         wav = [830, 900, 2000, 2200, 2300, 2412]  # nm

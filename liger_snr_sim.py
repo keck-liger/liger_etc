@@ -872,7 +872,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 fluxslice = apermask.multiply(fluxcube[i, :, :]*(1./np.sum(subimage)))
                 fluxslice[np.where(non_zero == 0)] += np.min(fluxslice[np.where(non_zero > 0)])
                 fluxapers = np.append(fluxapers,np.sum(fluxslice))
-                totFlux_spec = np.append(totFlux_spec, np.sum(fluxcube[i, :, :]*(1./np.sum(subimage))))
+                totFlux_spec = np.append(totFlux_spec, np.sum(fluxcube[i, :, :])*(1./np.sum(subimage)))
             totFlux_int = np.trapz(totFlux_spec, x=wave)
             aperflux_int = np.trapz(fluxapers, x = wave)
             totFlux = totFlux_int

@@ -337,12 +337,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
     #########################################################################
     if mode.lower() == "ifs":
         #hwbox = 25
-        if aperture/scale > 25:
-            hwbox = aperture/scale + 1
-        elif x_im_size <= 100:
-            hwbox = x_im_size/2
-        else:
-            hwbox = 50
+        hwbox = 2.5/scale
     elif mode == "imager":
         #hwbox = 239
         hwbox = x_im_size/4
@@ -844,6 +839,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 noisetotal = noisetotal
             print(np.sum(subimage))
             print(np.sum(spec_temp))
+            print('cubesize: ', np.shape(observedCube))
             print('collecting area:', collarea)
             print('scale:', scale)
             print('efftot:', efftot)

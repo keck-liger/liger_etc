@@ -853,7 +853,8 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             print('peak snr cube:' , np.max(snr_cube))
             fluxcube = (snr_cube ** 2. + snr_cube * np.sqrt(
                 snr_cube ** 2. + 4. * noisetotal * itime * nframes)) / (2. * itime * nframes)
-            fluxcube /= (efftot * collarea * subimgcube)
+            fluxcube /= (efftot * collarea * subimage)
+            fluxcube = fluxcube * (scale**2.)
             print('peak flux cube:', np.max(fluxcube))
             #fluxcube /= subimgcube
             apert = CircularAperture([xs, ys], radiusl)
@@ -869,10 +870,10 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             peakspec = fluxcube[:, xs, ys]
             peakint = np.trapz(peakspec, x=wave)
             for i in range(dxspectrum):
-                fluxslice = apermask.multiply(fluxcube[i, :, :]*(1./np.sum(subimage)))
+                fluxslice = apermask.multiply(fluxcube[i, :, :])
                 fluxslice[np.where(non_zero == 0)] += np.min(fluxslice[np.where(non_zero > 0)])
                 fluxapers = np.append(fluxapers,np.sum(fluxslice))
-                totFlux_spec = np.append(totFlux_spec, np.sum(fluxcube[i, :, :])*(1./np.sum(subimage)))
+                totFlux_spec = np.append(totFlux_spec, np.sum(fluxcube[i, :, :]))
             totFlux_int = np.trapz(totFlux_spec, x=wave)
             aperflux_int = np.trapz(fluxapers, x = wave)
             totFlux = totFlux_int
@@ -880,14 +881,14 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             print('lost flux factor: ', (1./np.sum(subimage)))
             print('PSF maximum: ', np.max(subimage))
             print('PSF sum: ', np.sum(subimage))
-            print('Integrated Peak over PSF Maximum Mag:', -2.5 * np.log10(float(peakint/(np.max(subimage)/np.sum(subimage))) / zp))
+            print('Integrated Peak over PSF Maximum Mag:', -2.5 * np.log10(float(peakint/(np.max(subimage))) / zp))
             print('Total Integrated vega Magnitude:', -2.5 * np.log10(float(totFlux_int) / zp) )
             print('Total Integrated AB Magnitude:', vega2ab(-2.5 * np.log10(float(totFlux_int) / zp), lambdac / 10.))
             print('Aperture Integrated vega Magnitude:', -2.5 * np.log10(float(aperflux_int) / zp) )
             print('Aperture Integrated AB Magnitude:', vega2ab(-2.5 * np.log10(float(aperflux_int) / zp), lambdac / 10.))
 
             peakfluxspec = fluxcube[:, xs, ys]
-            peakmag = vega2ab(-2.5 * np.log10(float(np.trapz(peakfluxspec*(1./np.max(subimage))*(1./np.sum(subimage)), x=wave)) / zp), lambdac / 10.)
+            peakmag = vega2ab(-2.5 * np.log10(float(np.trapz(peakfluxspec*(1./np.max(subimage)), x=wave)) / zp), lambdac / 10.)
             onescube = np.ones(cubesize)
             ones_spec = np.array([])
             ones_tot = np.array([])

@@ -854,7 +854,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             fluxcube = (snr_cube ** 2. + snr_cube * np.sqrt(
                 snr_cube ** 2. + 4. * noisetotal * itime * nframes)) / (2. * itime * nframes)
             fluxcube /= (efftot * collarea * subimage)
-            fluxcube = fluxcube * (scale**2.)
+            #fluxcube = fluxcube * (scale**2.)
             print('peak flux cube:', np.max(fluxcube))
             #fluxcube /= subimgcube
             apert = CircularAperture([xs, ys], radiusl)

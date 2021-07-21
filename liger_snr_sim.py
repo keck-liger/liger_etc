@@ -822,6 +822,8 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 subimgcube[i,:,:] = subimage
             spec_temp = spec_temp/intFlux
             #subimage = subimage/np.sum(subimage)
+            cubesize = np.shape(observedCube)
+            onesimg = np.ones((cubesize[1], cubesize[2]))
             cube = ((subimage) * spec_temp[:, np.newaxis, np.newaxis]).astype(np.float32)
             if mag_calc == "peak":
                 snr_cube = snr * cube / (np.max(cube))
@@ -837,6 +839,21 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             elif mag_calc == "per_wav":
                 snr_cube = snr * cube
                 noisetotal = noisetotal
+            elif mag_calc == "aper":
+                #cube = cube / (np.max(cube))
+                two_lod = 2.*lambdac*206265/(1.26e11)
+                lod_aper = CircularAperture([xs, ys], two_lod/scale)
+                lodmask = lod_aper.to_mask(method='exact')
+                fluxapers = np.array([])
+                aperspec = np.array([])
+                non_zero = lodmask.multiply(onesimg)
+                print('two_lod:', two_lod)
+                print('two_lod pixel:', two_lod/scale)
+                for i in range(dxspectrum):
+                    fluxslice = lodmask.multiply(cube[i, :, :])
+                    fluxslice[np.where(non_zero == 0)] += np.min(fluxslice[np.where(non_zero > 0)])
+                    aperspec = np.append(aperspec, np.sum(fluxslice))
+                snr_cube = snr * cube / np.max(aperspec)
             print(np.sum(subimage))
             print(np.sum(spec_temp))
             print('cubesize: ', np.shape(observedCube))
@@ -859,12 +876,8 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             #fluxcube /= subimgcube
             apert = CircularAperture([xs, ys], radiusl)
             apermask = apert.to_mask(method='exact')
-            cubesize = np.shape(observedCube)
-            onesimg = np.ones((cubesize[1], cubesize[2]))
             non_zero = apermask.multiply(onesimg)
             flatarray = np.ones(fluxcube[0, :, :].shape)
-
-
             fluxapers = np.array([])
             totFlux_spec = np.array([])
             peakspec = fluxcube[:, xs, ys]
@@ -903,6 +916,8 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 noisetotal = noisetotal
             elif mag_calc == "total":
                 snr_cube_aper = cube * np.trapz(ones_spec, x=wave)
+            elif mag_calc == "aper":
+                snr_cube_aper = cube * ones_spec[:, np.newaxis, np.newaxis]
             fluxcube_aper = (snr_cube_aper ** 2. + snr_cube_aper * np.sqrt(
                 snr_cube_aper ** 2. + 4. * noisetotal*np.pi*(radiusl**2.) * itime * nframes)) / (2. * itime * nframes)
             fluxcube_aper /= (efftot * collarea)

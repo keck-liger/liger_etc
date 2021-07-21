@@ -253,13 +253,15 @@ def exec_gui(page_container=None, side_container=None):
             mag_calc = snr_type.lower()
         elif mode == 'IFS':
             snr_type = side_container.radio('SNR Calculation:',
-                                      ['Integrated Total Across Spectrum', 'Peak'])
+                                      ['Integrated Total Across Spectrum', 'Peak', 'Aperture'])
             if snr_type == 'Per Wavelength Element':
                 mag_calc = 'per_wav'
             elif snr_type == 'Integrated Total Across Spectrum':
                 mag_calc = 'total'
             elif snr_type == 'Peak':
                 mag_calc = 'peak'
+            elif snr_type == 'Aperture':
+                mag_calc = 'aper'
             input_title1 = 'SNR ' + snr_type
             snr = side_container.number_input(input_title1, min_value=0., value=snr_default)
             input_title2 = 'Frame Integration Time (Seconds) per Wavelength Element: '

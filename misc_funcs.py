@@ -306,3 +306,12 @@ def readspec(filename):
         simdat = None
     return wvl, simdat
 
+def eround(n):
+    answer = round(n)
+    if not answer % 2:
+        return answer
+    if abs(answer + 1 - n) < abs(answer - 1 - n):
+        return answer + 1
+    else:
+        return answer - 1
+

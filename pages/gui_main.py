@@ -215,6 +215,8 @@ def exec_gui(page_container=None, side_container=None):
     snr_default = 5.
     #else:
     #    snr_default = st.session_state.snr
+    aper_calc = None
+    calc_aprad = None
     if calc == 'Signal-to-Noise Ratio (SNR)':
         if mode == 'Imager':
             input_title = 'Frame Integration Time (Seconds) per Bandpass: '
@@ -253,15 +255,13 @@ def exec_gui(page_container=None, side_container=None):
             mag_calc = snr_type.lower()
         elif mode == 'IFS':
             snr_type = side_container.radio('SNR Calculation:',
-                                      ['Integrated Total Across Spectrum', 'Peak', 'Aperture'])
+                                      ['Integrated Total Across Spectrum', 'Peak'])
             if snr_type == 'Per Wavelength Element':
                 mag_calc = 'per_wav'
             elif snr_type == 'Integrated Total Across Spectrum':
                 mag_calc = 'total'
             elif snr_type == 'Peak':
                 mag_calc = 'peak'
-            elif snr_type == 'Aperture':
-                mag_calc = 'aper'
             input_title1 = 'SNR ' + snr_type
             snr = side_container.number_input(input_title1, min_value=0., value=snr_default)
             input_title2 = 'Frame Integration Time (Seconds) per Wavelength Element: '
@@ -954,7 +954,7 @@ def exec_gui(page_container=None, side_container=None):
             #   Calculation
             aperture = col3.slider(label='Aperture Radius (miliarcseconds):', min_value=1.,
                                    max_value=float(np.min(etc_fov)*1e3/2.),
-                                   value=float(np.min([float(radiusl), np.min(etc_fov)/2.])*1e3))
+                                   value=float(2000.*np.mean([lmin*10., lmax*10.])*206265./(1.26e11)))
             aperture *= 1e-3
             if aperture/etc_scale < 1: col3.markdown('WARNING: You have selected an aperture radius less than 1 pixel.')
             sim_mode = col3.checkbox('Plot SNR over Aperture Radius (long calculation time)')

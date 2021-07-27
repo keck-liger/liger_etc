@@ -807,8 +807,11 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             # itime * nframes =  (snr * np.sqrt(observedCube+noisetotal)/observedCube)**2
             E_ph = (h*c)/(wave[:,np.newaxis,np.newaxis]*1e-4)
             subimgcube = np.zeros(np.shape(cube))
+            noise_spec = np.array([])
             for i in range(np.shape(cube)[0]):
                 subimgcube[i,:,:] = subimage
+                noise_spec = np.append(noise_spec, np.sum(noisetotal[i, :, :]))
+            intnoise = np.trapz(noise_spec, x=wave)
             spec_temp = spec_temp/intFlux
             #subimage = subimage/np.sum(subimage)
             cubesize = np.shape(observedCube)
@@ -839,6 +842,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             print('resolution:', resolution)
             print('snr:', snr)
             print('intflux:', intFlux)
+            print('int noise:', intnoise)
             print('peak cube:', np.max(cube))
             print('peak snr cube:' , np.max(snr_cube))
             fluxcube = (snr_cube ** 2. + np.sqrt(
@@ -847,10 +851,10 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             totFlux_spec = np.array([])
             peakspec = fluxcube[:, xs, ys]
             peakint = np.trapz(peakspec, x=wave)
-            peakmag = vega2ab(-2.5 * np.log10(float(peakint*(np.sum(subimage)/np.max(subimage))) / zp), lambdac / 10.)
+            peakmag = vega2ab(-2.5 * np.log10(float(peakint*(1./np.max(subimage))) / zp), lambdac / 10.)
             for i in range(dxspectrum):
                 totFlux_spec = np.append(totFlux_spec, np.sum(fluxcube[i, :, :]))
-            totFlux = np.trapz(totFlux_spec, x=wave)#*(1./np.sum(subimage))
+            totFlux = np.trapz(totFlux_spec, x=wave) * (1./np.sum(subimage))
             print('lost flux factor: ', (1./np.sum(subimage)))
             print('PSF maximum: ', np.max(subimage))
             print('PSF sum: ', np.sum(subimage))
@@ -903,7 +907,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             fluxapers = np.array([])
             for i in range(dxspectrum):
                 fluxapers = np.append(fluxapers, np.sum(fluxcube_aper[i, :, :]))
-            totFlux_aper = np.trapz(fluxapers, x=wave)
+            totFlux_aper = np.trapz(fluxapers, x=wave) * (1./np.sum(subimage))
 
             #### Test for aperture magnitude code ####
             non_zero = lodmask.multiply(onesimg)

@@ -952,9 +952,12 @@ def exec_gui(page_container=None, side_container=None):
             col3, col4 = st.beta_columns(2)
             col3.subheader('Liger Calculation Results:')
             #   Calculation
-            aperture = col3.slider(label='Aperture Radius (miliarcseconds):', min_value=1.,
+            two_lod = 2000. * np.mean([lmin * 10., lmax * 10.]) * 206265. / (1.26e11)
+            aperture = col3.number_input(label='Aperture Radius (miliarcseconds):', min_value=1.,
                                    max_value=float(np.min(etc_fov)*1e3/2.),
-                                   value=float(2000.*np.mean([lmin*10., lmax*10.])*206265./(1.26e11)))
+                                   value=two_lod)
+
+            col3.markdown('$2 * \lambda / {D}$: ' + str(two_lod)[0:(str(two_lod).find('.'))] + ' mas')
             aperture *= 1e-3
             if aperture/etc_scale < 1: col3.markdown('WARNING: You have selected an aperture radius less than 1 pixel.')
             sim_mode = col3.checkbox('Plot SNR over Aperture Radius (long calculation time)')

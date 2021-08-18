@@ -378,7 +378,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             no_oh = True
         else:
             no_oh = False
-        bkgd = background_specs3(resolution*2.0, filter, convolve=True, simdir=simdir, no_oh=no_oh, ohsim=False)
+        bkgd = background_specs3(resolution*2.0, filter, convolve=True, simdir=simdir, no_oh=no_oh, ohsim=True)
         ohspec = bkgd.backspecs[0,:]
         cospec = bkgd.backspecs[1,:]
         bbspec = bkgd.backspecs[2,:]
@@ -816,7 +816,7 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             #subimage = subimage/np.sum(subimage)
             cubesize = np.shape(observedCube)
             onesimg = np.ones((cubesize[1], cubesize[2]))
-            cube = observedCube * np.sqrt(itime * nframes) / np.sqrt(observedCube + noisetotal)
+            cube = observedCube #* np.sqrt(itime * nframes) / np.sqrt(observedCube + noisetotal)
             #cube = ((subimage) * spec_temp[:, np.newaxis, np.newaxis]).astype(np.float32)
             if mag_calc == "peak":
                 snr_cube = snr * cube / (np.max(cube))
@@ -832,7 +832,9 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             elif mag_calc == "per_wav":
                 snr_cube = snr * cube
                 noisetotal = noisetotal
-
+            print('cubesize: ', cubesize)
+            print('noise shape: ', np.shape(noisetotal))
+            print('snr: ', snr)
             print('collecting area:', collarea)
             print('scale:', scale)
             print('efftot:', efftot)
@@ -860,11 +862,11 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
             print('PSF sum: ', np.sum(subimage))
             print('Total Integrated vega Magnitude:', -2.5 * np.log10(float(totFlux) / zp) )
             print('Total Integrated AB Magnitude:', vega2ab(-2.5 * np.log10(float(totFlux) / zp), lambdac / 10.))
-
+            print('aperture radius: ' + str(radiusl*scale) + ' arseconds; ' + str(radiusl) + ' pixels')
             #### This code computes the aperture calculation
             #### signal flux required to yield input SNR for the flux within specified aperture
             #### (either integrated over spectrum with the aperture or the peak slice aperture)
-            pixel_rad = radiusl / scale
+            pixel_rad = radiusl
             lod_aper = CircularAperture([xs, ys], pixel_rad)
             lodmask = lod_aper.to_mask(method='exact')
             aperspec = np.array([])
@@ -891,12 +893,18 @@ def LIGER_ETC(filter = "K", mag = 21.0, flambda=1.62e-19, fint=4e-17, itime = 1.
                 int_noise_aper = np.trapz(noise_aper, x=wave)
             elif mag_calc == 'peak':
                 int_snr_aper = np.max(aperspec)
-                int_noise_aper = noise_aper[(np.where(aperspec == np.max(aperspec))[0])]
-                total_snr_int = aperspec[(np.where(aperspec == np.max(aperspec))[0])] * np.sqrt(
-                    itime * nframes) / np.sqrt(aperspec[(np.where(aperspec == np.max(aperspec))[0])] + noise_aper[
-                    (np.where(aperspec == np.max(aperspec))[0])])
+                print('possible noise apers: ', noise_aper[(np.where(aperspec == np.max(aperspec))[0])])
+                int_noise_aper = np.min(noise_aper[(np.where(aperspec == np.max(aperspec))[0])])
+                print(int_noise_aper)
+                total_snr_int = int_snr_aper * np.sqrt(itime * nframes) / np.sqrt(int_snr_aper + int_noise_aper) 
+                #total_snr_int = aperspec[(np.where(aperspec == np.max(aperspec))[0])] * np.sqrt(
+                #    itime * nframes) / np.sqrt(aperspec[(np.where(aperspec == np.max(aperspec))[0])] + noise_aper[
+                #    (np.where(aperspec == np.max(aperspec))[0])])
             aper_sig = (snr ** 2. + np.sqrt(snr ** 4. + 4. * snr ** 2. * int_noise_aper * itime * nframes)) / (
                         2. * itime * nframes)
+            print('total_snr_int: ', total_snr_int)
+            print('aper sig:', aper_sig)
+            print('int_snr_aper: ', int_snr_aper)
             signal_tot = total_snr_int * aper_sig / int_snr_aper
             fluxcube_aper = signal_tot * cube / total_snr_int
             # snr_cube_aper = fluxcube_aper * np.sqrt(itime * nframes) / np.sqrt(fluxcube_aper + noisetotal)

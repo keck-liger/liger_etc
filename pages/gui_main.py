@@ -109,9 +109,9 @@ def exec_gui(page_container=None, side_container=None):
     psfdir = config.get('CONFIG', 'psfdir')
 
     #   Page title, set 2 columns for page format. Setup the configuration sidebar.
-    container = page_container.beta_container()
+    container = page_container.container()
     container.subheader('Instrument Configuration')
-    col1, col2 = container.beta_columns(2)
+    col1, col2 = container.columns(2)
 
     scale = col1.number_input('Plate Scale ( Milircseconds per Spatial Pixel )', value=14.)
     if 'fov' not in st.session_state:
@@ -273,11 +273,11 @@ def exec_gui(page_container=None, side_container=None):
         col1.write('Calculating Source Flux Required for input Integration Time and Input SNR' + calc_title)
     #st.session_state.snr = snr
     #   select flux type and input the source flux
-    side_cont = side_container.beta_container()
+    side_cont = side_container.container()
     side_cont.subheader('Source Properties')
     if calc != 'Limiting Flux':
         fl = side_cont.selectbox('Input Flux Method:', ['Magnitude', 'Flux Density','Integrated Flux over Bandpass'])
-        side_col1, side_col2 = side_cont.beta_columns([3, 1])
+        side_col1, side_col2 = side_cont.columns([3, 1])
         if fl == 'Magnitude':
             mag = side_col1.number_input('Magnitude: ', value = 20.)
             veg = side_col2.radio('Magnitude Standard:', ('Vega', 'AB'))
@@ -346,7 +346,7 @@ def exec_gui(page_container=None, side_container=None):
 
     if source == 'Extended (Mag/Sq. Arcsec.)':
         if prof_type == 'Sersic Profile':
-            prof_side_col1, prof_side_col2 = side_container.beta_columns([2,3])
+            prof_side_col1, prof_side_col2 = side_container.columns([2,3])
             from misc_funcs import sersic_profile
             s_ind = prof_side_col1.selectbox('Sersic Index:', [1,2,3,4])
             r_eff = prof_side_col2.number_input('Effective Radius ("):', min_value=etc_scale, value=0.5)
@@ -390,7 +390,7 @@ def exec_gui(page_container=None, side_container=None):
 #   Deal with input spectrum
     if spec == 'Emission':
         lam_obs = side_container.number_input('Line Wavelength (nm)', min_value=lmin, value=lmean, max_value=lmax)
-        eside_col1, eside_col2 = side_container.beta_columns([3, 1])
+        eside_col1, eside_col2 = side_container.columns([3, 1])
         emis_unit = eside_col2.radio('Width Unit:',['km/s', 'nm'])
         if emis_unit == 'km/s':
             line_width = eside_col1.number_input('Line Width (km/s):', min_value=1., value=200.)
@@ -402,7 +402,7 @@ def exec_gui(page_container=None, side_container=None):
         line_width = 200.
         lam_obs = lmean*1e-3
     if spec == 'Phoenix Stellar Library Spectrum':
-        pcol1, pcol2 = side_container.beta_columns(2)
+        pcol1, pcol2 = side_container.columns(2)
         teff = pcol1.selectbox('Teff (K):', [str(int(i)) for i in np.append(np.arange(23,70)*100, np.arange(35,61)*200)])
         logg = pcol1.selectbox('log(g):', [str(i)[0:3] for i in np.arange(0,13)/2.])
         feh = pcol2.selectbox('Fe/H:', ['-4.0', '-3.0', '-2.0', '-1.5', '-1.0', '-0.5', '-0.0', '+0.5', '+1.0'], index=6)
@@ -437,7 +437,7 @@ def exec_gui(page_container=None, side_container=None):
         spec_temp = flux_phot * spec_temp / np.trapz(spec_temp, x=wave)
         specinput = [np.array(wave), np.array(spec_temp)]
     elif spec == 'Stellar Population Spectra - Maraston & Stromback (2011)':
-        pcol1, pcol2 = side_container.beta_columns(2)
+        pcol1, pcol2 = side_container.columns(2)
         speclib = pcol1.selectbox('Stellar Population Library:', ['MILES', 'STELIB', 'ELODIE',
                                                                     'MARCS', 'LRG'])
         if speclib == 'LRG':
@@ -540,7 +540,7 @@ def exec_gui(page_container=None, side_container=None):
     elif spec == 'Custom':
         specinput = [np.array(wave), np.zeros((dxspectrum))]
         page_container.subheader('Input Spectrum Generator')
-        specol1, specol2, specol3, specol4 = page_container.beta_columns(4)
+        specol1, specol2, specol3, specol4 = page_container.columns(4)
 
         def add_spec(spec1, k, filt='K', wave=None, scale=None, fint=None, flambda=None, mag=None, source=None,
              simdir='~/Liger/sim', lam_obs=None, line_width=None, mode='ifs'):
@@ -903,10 +903,10 @@ def exec_gui(page_container=None, side_container=None):
     else:
         radiusl = 40 * lmean * 1e2 * 206265 / (1.26e11)
 
-    with page_container.beta_container():
+    with page_container.container():
 
         ##input PSF configuration
-        psf_col1, psf_col2 = st.beta_columns(2)
+        psf_col1, psf_col2 = st.columns(2)
         psf_col1.subheader('Point Spread Function (PSF) Configuration:')
         psfmode = psf_col1.selectbox('Select PSF Option:', ['Generated Analytic PSF','Pre-generated LTAO PSF'])
         if psfmode == 'Pre-generated LTAO PSF':
@@ -949,7 +949,7 @@ def exec_gui(page_container=None, side_container=None):
             #     blur = True
             psf_col2.markdown('[KAPA Strehl Calculator](http://bhs.astro.berkeley.edu/cgi-bin/kapa_strehl)')
         with st.form(key='calc_form'):
-            col3, col4 = st.beta_columns(2)
+            col3, col4 = st.columns(2)
             col3.subheader('Liger Calculation Results:')
             #   Calculation
             two_lod = 2000. * np.mean([lmin * 10., lmax * 10.]) * 206265. / (1.26e11)

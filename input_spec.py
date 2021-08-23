@@ -19,12 +19,12 @@ h = 6.626068E-27    # cm^2*g/s
 k = 1.3806503E-16   # cm^2*g/(s^2*K)
 Ang = 1E-8          # cm
 mu = 1E-4           # cm
-page_cont = st.beta_container()
+page_cont = st.container()
 
 
-col1,col2 = page_cont.beta_columns(2)
-page_container = st.beta_container()
-with page_container.beta_container():
+col1,col2 = page_cont.columns(2)
+page_container = st.container()
+with page_container.container():
     num1 = col1.number_input('First Number:',min_value=0.1, value=1.5, max_value=5.)
     num2 = col2.number_input('Second Number:', min_value = 1000., value = 2000., max_value=5000.)
 
@@ -147,9 +147,9 @@ def exec_gui(page_container=None, side_container=None):
     psfdir = config.get('CONFIG', 'psfdir')
 
     #   Page title, set 2 columns for page format. Setup the configuration sidebar.
-    container = page_container.beta_container()
+    container = page_container.container()
     container.title('OSIRIS Exposure Time Calculator')
-    col1, col2 = container.beta_columns(2)
+    col1, col2 = container.columns(2)
     col1.subheader('OSIRIS Configuration')
 
     #   select the mode for the ETC -- Imager or IFS
@@ -305,11 +305,11 @@ def exec_gui(page_container=None, side_container=None):
         col1.write('Calculating Integration Time for Input SNR')
 
     #   select flux type and input the source flux
-    side_cont = side_container.beta_container()
+    side_cont = side_container.container()
     side_cont.subheader('Source Properties')
     fl = side_cont.selectbox('Input Flux Method:', ['Magnitude', 'Flux Density', 'Integrated Flux over Bandpass'])
     if fl == 'Magnitude':
-        side_col1, side_col2 = side_cont.beta_columns([3, 1])
+        side_col1, side_col2 = side_cont.columns([3, 1])
         mag = side_col1.number_input('Magnitude: ', value=20.)
         veg = side_col2.radio('Magnitude Standard:', ('Vega', 'AB'))
         if veg == 'AB':
@@ -391,7 +391,7 @@ def exec_gui(page_container=None, side_container=None):
         line_width = 200.
         lam_obs = lmean * 1e-3
     if spec == 'Phoenix Stellar Library Spectrum':
-        pcol1, pcol2 = side_container.beta_columns(2)
+        pcol1, pcol2 = side_container.columns(2)
         teff = pcol1.selectbox('Teff (K):',
                                [str(int(i)) for i in np.append(np.arange(23, 70) * 100, np.arange(35, 61) * 200)])
         logg = pcol1.selectbox('log(g):', [str(i)[0:3] for i in np.arange(0, 13) / 2.])
@@ -446,7 +446,7 @@ def exec_gui(page_container=None, side_container=None):
         wave = np.linspace(lmin / 1e3, lmax / 1e3, dxspectrum)
         specinput = [np.array(wave), np.zeros((dxspectrum))]
         page_container.subheader('Input Spectrum Generator')
-        specol1, specol2, specol3 = page_container.beta_columns(3)
+        specol1, specol2, specol3 = page_container.columns(3)
         l = 1
         k = 1
         spec1 = specol1.selectbox('Add Spectrum:', ['None', 'Vega', 'Flat', 'Emission',
@@ -714,8 +714,8 @@ def exec_gui(page_container=None, side_container=None):
         specinput = None
 
     ##input PSF configuration
-    with page_container.beta_container():
-        psf_col1, psf_col2 = page_container.beta_columns(2)
+    with page_container.container():
+        psf_col1, psf_col2 = page_container.columns(2)
         psf_col1.subheader('Point Spread Function (PSF) Configuration:')
         psfmode = psf_col1.selectbox('Select PSF Option:', ['Generated Analytic PSF', 'Pre-generated SCAO PSF'])
         if psfmode == 'Pre-generated SCAO PSF':
@@ -766,8 +766,8 @@ def exec_gui(page_container=None, side_container=None):
         radiusl = 40 * lmean * 1e2 * 206265 / (1.26e11)
 
     #   Container for Results and result plots.
-    with page_container.beta_container():
-        col3, col4 = page_container.beta_columns(2)
+    with page_container.container():
+        col3, col4 = page_container.columns(2)
         col3.subheader('OSIRIS Calculation Results:')
         #   Calculation
         aperture = col3.slider(label='Aperture Radius (arcseconds):', min_value=0.01,

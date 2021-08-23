@@ -30,7 +30,7 @@ def bugpage(page_container=None):
             expanded = False
         pc.markdown('If your bug is dependent on specific ETC input values, please enter them using the dropdown '
                     'below.')
-        with pc.beta_expander('Fill out ETC values', expanded=expanded):
+        with pc.expander('Fill out ETC values', expanded=expanded):
             st.markdown('Please make the ETC box selections with which your bug occurred.')
             bugmode = st.radio("Please Select OSIRIS Mode", ['IFS', 'Imager'], key='bugmode')
             bugcalc = st.radio('calculate: ', ['Signal-to-Noise Ratio (SNR)', 'Exposure Time'], key='bugcalc')
@@ -45,7 +45,7 @@ def bugpage(page_container=None):
             bugfl = st.selectbox('Input Flux Method:', ['Magnitude', 'Flux Density', 'Integrated Flux over Bandpass'],
                                  key='bugfl')
             if bugfl == 'Magnitude':
-                side_col1, side_col2 = st.beta_columns([3, 1])
+                side_col1, side_col2 = st.columns([3, 1])
                 bugmag = side_col1.number_input('Magnitude: ', value=20.)
                 veg = side_col2.radio('Magnitude Standard:', ('Vega', 'AB'), key='bugveg')
             elif bugfl == 'Flux Density':

@@ -25,11 +25,11 @@ st.set_page_config(
     page_icon="Logo_name.png"
 )
 
-title_container = st.beta_container()
+title_container = st.container()
 
 #   Bottom of page setup.  Here we will include the buttons and about information.
-with st.beta_container():
-    col5, col6, col7, col8, col9, col10, col11 = st.beta_columns(7)
+with st.container():
+    col5, col6, col7, col8, col9, col10, col11 = st.columns(7)
     col10.image('liger_logo.png', use_column_width='auto')
     col11.image('keck_obs_logo.png', use_column_width='auto')
     col5.subheader('Page Navigation:')
@@ -39,8 +39,8 @@ with st.beta_container():
 #   at the bottom of the page, we must first designate the different parts of the page where things are allocated.
 #   These variables will be passed to the different page functions so that they can insert elements above the 'About'
 #   section where the bug submission page and help page buttons will be.
-page_main = st.beta_container()
-side_main = st.sidebar.beta_container()
+page_main = st.container()
+side_main = st.sidebar.container()
 if page_ref == 'Help Page':
     title_container.title('Help With Liger ETC')
     pages.gui_help.helppage(page_container=page_main)
@@ -51,8 +51,8 @@ else:
     title_container.title('W.M. Keck Observatory - Liger Exposure Time Calculator')
     pages.gui_main.exec_gui(page_container=page_main, side_container=side_main)
 
-with st.beta_container():
-    col5, col6, col7, col8, col9, col10, col11 = st.beta_columns(7)
+with st.container():
+    col5, col6, col7, col8, col9, col10, col11 = st.columns(7)
     col11.image('Long-Name.png', use_column_width='auto')
     col10.image('mulab_logo_short.png', use_column_width='auto')
     col9.image('nasa_logo.png', use_column_width='auto')

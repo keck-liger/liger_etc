@@ -41,7 +41,7 @@ def helppage(page_container=None):
     Background from moonlight is not included.
     ''')
 
-    backg_dropdown = pc.beta_expander('Plot Gemini Background Spectrum')
+    backg_dropdown = pc.expander('Plot Gemini Background Spectrum')
     if backg_dropdown:
         import configparser
         import os
@@ -81,7 +81,7 @@ def helppage(page_container=None):
     (assumed to be 65% and 50% respectively) to yield the total throughputs estimated in the plot below.
     ''')
 
-    eff_dropdown = pc.beta_expander('Plot Throughput Values over Wavelength')
+    eff_dropdown = pc.expander('Plot Throughput Values over Wavelength')
     if eff_dropdown:
         wi = 9000  # Ang
         wf = 24000  # Ang
